@@ -1,8 +1,22 @@
 # Minhas Ações
 
 App para acompanhar cotações de ações da B3 (bolsa brasileira), com login, área de administração
-e uma carteira de ações para cada pessoa. Roda **só no seu computador** por enquanto — publicar na
-internet é um passo futuro.
+e uma carteira de ações para cada pessoa.
+
+## 🌐 Site publicado
+
+O app está publicado e pode ser acessado de qualquer lugar em:
+
+**https://painel-acoes-production-8fa2.up.railway.app**
+
+- Hospedado no [Railway](https://railway.com), plano Trial gratuito.
+- O código fica no GitHub, em https://github.com/marceloibanez756-boop/painel-acoes — toda vez
+  que uma nova versão é enviada para o GitHub (branch `main`), o site é atualizado sozinho.
+- Os usuários, senhas e carteiras ficam guardados em um **Volume** permanente do Railway (não é
+  apagado quando o site é atualizado ou reiniciado).
+- O usuário e a senha do administrador, e qualquer outro segredo, ficam configurados como
+  **variáveis de ambiente dentro do Railway** — nunca em arquivo, nunca no GitHub.
+- Continua dando para rodar só no seu computador também (veja abaixo), do jeito que sempre foi.
 
 ## O que o app faz
 
@@ -137,8 +151,15 @@ o que apareceu) para eu corrigir.
 O app antigo (sem login, com dados fixos) ainda existe, guardado como `index-antigo-backup.html`
 — dá para abrir com duplo clique normalmente, sem depender do servidor.
 
-## E se eu quiser publicar isso na internet no futuro?
+## Como publicar uma atualização no site
 
-Dá para fazer, mas exige alguns cuidados extras (HTTPS, um lugar para hospedar o servidor,
-proteções contra ataques automatizados) que não fazem sentido enquanto o app roda só no seu
-computador. Quando chegar a hora, é só pedir.
+1. Salve suas alterações nos arquivos normalmente.
+2. Envie para o GitHub (ou peça para eu enviar): `git add -A`, `git commit -m "..."`, `git push`.
+3. O Railway detecta o envio sozinho, gera uma nova versão e publica — leva cerca de 1 a 2 minutos.
+   Os usuários e carteiras já cadastrados continuam intactos (ficam no Volume, não no código).
+
+## Sobre o plano gratuito do Railway
+
+O plano Trial dá um crédito único (não é mensal). Quando esse crédito acabar, o Railway pode
+pausar o site até você adicionar um cartão de crédito e escolher um plano pago. Isso não afeta
+os dados guardados — só pausa o site até você decidir continuar.

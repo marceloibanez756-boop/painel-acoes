@@ -4,15 +4,16 @@ Este arquivo orienta o Claude Code (claude.ai/code) ao trabalhar neste repositó
 
 ## Visão geral
 
-App web local (roda só em `localhost`, sem publicação na internet) para acompanhar cotações
-de ações da B3. Tem login obrigatório, dois papéis de usuário (administrador e comum), área de
-administração para gestão de contas, e uma carteira de ações por usuário. Os preços vêm ao vivo
-da Yahoo Finance. Todo o texto voltado ao usuário (telas, mensagens de erro, e-mails) é em
-português do Brasil — mantenha esse padrão em qualquer alteração.
+App web para acompanhar cotações de ações da B3. Tem login obrigatório, dois papéis de usuário
+(administrador e comum), área de administração para gestão de contas, e uma carteira de ações
+por usuário. Os preços vêm ao vivo da Yahoo Finance. Todo o texto voltado ao usuário (telas,
+mensagens de erro, e-mails) é em português do Brasil — mantenha esse padrão em qualquer alteração.
 
-Publicar isso na internet é um passo futuro, não coberto por esta versão. Por isso não há HTTPS,
-rate limiting, proteção contra força bruta no login, etc. — decisões aceitáveis para uso local,
-mas que precisam ser revisitadas antes de expor o app fora do computador do usuário.
+Roda tanto localmente (`localhost`) quanto publicado na internet, no Railway
+(https://painel-acoes-production-8fa2.up.railway.app), a partir do repositório GitHub
+`marceloibanez756-boop/painel-acoes` (deploy automático a cada `git push` na branch `main`).
+Ainda não há rate limiting nem proteção contra força bruta no login — aceitável por enquanto
+dado o volume de uso esperado (poucos usuários conhecidos), mas revisitar se o uso crescer.
 
 ## Stack e por que essas escolhas
 
@@ -125,6 +126,34 @@ npm start       # roda node server.js, sobe em http://localhost:$PORTA (padrão 
 
 Não há suíte de testes automatizada. Para verificar mudanças na API, use `curl` manualmente
 (veja exemplos no histórico do projeto) ou o roteiro de teste manual do `README.md`.
+
+## Publicação (Railway)
+
+- Projeto Railway `painel-acoes`, serviço `painel-acoes`, ligado ao repositório GitHub
+  `marceloibanez756-boop/painel-acoes` (branch `main`) — cada `git push` dispara um novo deploy
+  automaticamente (build via Railpack/Nixpacks, comando de start é o `npm start` do `package.json`).
+- **Porta**: o Railway injeta a variável `PORT` (em inglês, diferente da `PORTA` local em
+  português) — `server.js` lê `process.env.PORT || process.env.PORTA || 3000`, nessa ordem.
+- **Dados persistentes**: `servidor/db.js` lê `process.env.DADOS_DIR`; no Railway essa variável
+  aponta para `/data`, que é um **Volume** (HD permanente) de 500MB anexado ao serviço. Sem isso,
+  `dados/dados.json` viveria no sistema de arquivos do container e seria apagado a cada deploy.
+- **Segredos**: `ADMIN_NOME`, `ADMIN_USUARIO`, `ADMIN_EMAIL`, `ADMIN_SENHA`, `CHAVE_SESSAO` e
+  `NODE_ENV=production` ficam como variáveis de ambiente no Railway, nunca em arquivo/repositório.
+  `NODE_ENV=production` faz o cookie de sessão usar `secure: true` (só trafega em https) —
+  ver `servidor/auth.js`. `server.js` também chama `app.set("trust proxy", 1)` porque o Railway
+  fica atrás de um proxy que termina o https antes de repassar a requisição ao container.
+- **Corrigir a senha do administrador sem apagar dados**: se `ADMIN_SENHA` for configurada errada
+  e o administrador inicial já tiver sido criado, definir a variável `REDEFINIR_SENHA_ADMIN=true`
+  no Railway (junto com o `ADMIN_SENHA` correto) faz `server.js` redefinir a senha desse usuário
+  (por `ADMIN_USUARIO`) no próximo boot, marcando `precisaTrocarSenha: true`, sem tocar em mais
+  nada. Depois de usar, apague a variável `REDEFINIR_SENHA_ADMIN` (ou ela redefiniria de novo a
+  cada reinício, se alguém mudar `ADMIN_SENHA` no futuro por outro motivo).
+- **CLI usada para tudo isso**: `@railway/cli` (instalado via `npm install -g`, precisa da flag
+  `--allow-scripts=@railway/cli` para o binário nativo ser baixado). Duas pegadinhas encontradas
+  nessa CLI (versão 5.45.5): `railway volume add --service <nome>` trava com um panic em Rust —
+  funciona se omitir `--service` (só há 1 serviço no projeto, ela detecta sozinha); e mudar uma
+  variável para o **mesmo valor** que já tinha (ex: `REDEFINIR_SENHA_ADMIN=true` de novo) não
+  dispara um novo deploy — nesse caso use `railway redeploy --yes` para forçar.
 
 ## Pegadinha conhecida do ambiente (Windows)
 

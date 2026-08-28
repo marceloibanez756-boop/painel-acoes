@@ -32,7 +32,7 @@ function garantirPrimeiroAdministrador() {
     email: ADMIN_EMAIL.trim(),
     senhaHash: auth.criarHashSenha(ADMIN_SENHA),
     tipo: "admin",
-    precisaTrocarSenha: false,
+    precisaTrocarSenha: true,
     criadoEm: new Date().toISOString(),
   });
   dados.carteiras[id] = ["PETR4", "ITUB4", "VALE3"];

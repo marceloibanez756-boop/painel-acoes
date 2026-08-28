@@ -10,9 +10,31 @@ const cookieParser = require("cookie-parser");
 const db = require("./servidor/db");
 const auth = require("./servidor/auth");
 
+// Correção pontual: se REDEFINIR_SENHA_ADMIN=true estiver definida, redefine a senha do
+// administrador (ADMIN_USUARIO) sem apagar mais nada — útil se a senha foi configurada errada
+// por engano. Remova essa variável depois de usar, para não redefinir de novo sem querer.
+function redefinirSenhaAdministradorSeSolicitado(dados) {
+  if (process.env.REDEFINIR_SENHA_ADMIN !== "true") return false;
+  const { ADMIN_USUARIO, ADMIN_SENHA } = process.env;
+  if (!ADMIN_USUARIO || !ADMIN_SENHA) return false;
+
+  const usuarioNormalizado = ADMIN_USUARIO.trim().toLowerCase();
+  const usuario = dados.usuarios.find((u) => u.usuario.toLowerCase() === usuarioNormalizado);
+  if (!usuario) return false;
+
+  usuario.senhaHash = auth.criarHashSenha(ADMIN_SENHA);
+  usuario.precisaTrocarSenha = true;
+  db.salvar(dados);
+  console.log(`\nSenha do administrador "${usuarioNormalizado}" foi redefinida via REDEFINIR_SENHA_ADMIN.\n`);
+  return true;
+}
+
 function garantirPrimeiroAdministrador() {
   const dados = db.carregar();
-  if (dados.usuarios.length > 0) return;
+  if (dados.usuarios.length > 0) {
+    redefinirSenhaAdministradorSeSolicitado(dados);
+    return;
+  }
 
   const { ADMIN_NOME, ADMIN_USUARIO, ADMIN_EMAIL, ADMIN_SENHA } = process.env;
   if (!ADMIN_NOME || !ADMIN_USUARIO || !ADMIN_EMAIL || !ADMIN_SENHA) {

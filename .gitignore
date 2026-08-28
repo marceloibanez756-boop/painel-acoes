@@ -1,0 +1,12 @@
+# Dependências (reinstaladas com "npm install")
+node_modules/
+
+# Segredos locais — nunca deve ir para o GitHub
+.env
+.env.local
+
+# Dados reais dos usuários (fica só no computador ou no Volume do Railway)
+dados/
+
+# Arquivos temporários do Windows/editor
+*.tmp

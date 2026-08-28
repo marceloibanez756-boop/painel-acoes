@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Minhas Ações</title>
+<link rel="stylesheet" href="estilos.css" />
+</head>
+<body>
+
+<!-- Tela de login -->
+<div id="tela-login" class="tela-centralizada oculto">
+  <div class="caixa-login">
+    <h1>Minhas Ações</h1>
+    <p class="subtitulo">Entre com seu usuário e senha para continuar.</p>
+    <div id="erro-login"></div>
+    <form id="form-login">
+      <div class="campo">
+        <label for="campo-usuario">Usuário</label>
+        <input id="campo-usuario" name="usuario" autocomplete="username" required />
+      </div>
+      <div class="campo">
+        <label for="campo-senha">Senha</label>
+        <input id="campo-senha" name="senha" type="password" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="botao bloco">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Tela obrigatória de troca de senha (senha temporária) -->
+<div id="tela-trocar-senha" class="tela-centralizada oculto">
+  <div class="caixa-login">
+    <h1>Definir nova senha</h1>
+    <p class="subtitulo">Você entrou com uma senha temporária. Para continuar, defina uma senha nova e só sua.</p>
+    <div id="conteudo-trocar-senha"></div>
+  </div>
+</div>
+
+<!-- App principal -->
+<div id="app-shell" class="app-shell oculto">
+  <aside class="barra-lateral">
+    <div class="marca">📈 Minhas Ações</div>
+    <nav>
+      <button class="link-nav" data-rota="acoes">Ações</button>
+      <button class="link-nav" data-rota="carteira">Minha carteira</button>
+      <button class="link-nav" data-rota="conta">Minha conta</button>
+      <button class="link-nav oculto" id="link-admin" data-rota="admin">Administração</button>
+    </nav>
+    <div class="rodape-lateral">
+      <div class="nome-usuario" id="rodape-nome"></div>
+      <div class="papel-usuario" id="rodape-papel"></div>
+      <button class="botao secundario bloco" id="botao-sair">Sair</button>
+    </div>
+  </aside>
+
+  <main class="conteudo" id="conteudo"></main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

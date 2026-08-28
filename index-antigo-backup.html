@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<title>Cotação e performance — últimos 3 anos</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card-bg: #ffffff;
+    --text: #1a1a1a;
+    --muted: #666666;
+    --border: #e2e2e2;
+    --up: #1a7f37;
+    --down: #c62828;
+    --brand: #8a05be;
+    --destaque-bg: #eafff1;
+    --destaque-border: #b8f0c9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f0f12;
+      --card-bg: #1f2026;
+      --text: #eaeaea;
+      --muted: #a0a0a8;
+      --border: #33343c;
+      --up: #4ade80;
+      --down: #f87171;
+      --brand: #b266e8;
+      --destaque-bg: #10261a;
+      --destaque-border: #1e4430;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  .destaque {
+    background: var(--destaque-bg);
+    border: 1px solid var(--destaque-border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--up);
+    letter-spacing: 0.02em;
+  }
+  .pendente {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-top: -14px;
+    margin-bottom: 24px;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; color: var(--brand); }
+  .subtitle { color: var(--muted); margin-top: 0; margin-bottom: 24px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .card h3 { margin: 0 0 8px; font-size: 1rem; }
+  .card .preco { font-size: 1.6rem; font-weight: 600; margin: 4px 0; }
+  .card .perf { font-size: 1rem; font-weight: 600; }
+  .perf.up { color: var(--up); }
+  .perf.down { color: var(--down); }
+  .card .periodo { color: var(--muted); font-size: 0.8rem; margin-top: 6px; }
+  section { margin-bottom: 28px; }
+  h2 { font-size: 1.1rem; margin-bottom: 6px; }
+  .chart-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  canvas { width: 100%; height: 380px; display: block; }
+  .legend { display: flex; gap: 20px; margin-top: 8px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  th { color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td.rank { font-weight: 700; color: var(--muted); width: 32px; }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; font-size: 0.8rem; color: var(--text); display: none; white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="destaque" id="destaque"></p>
+
+  <h1>Cotação e performance — últimos 3 anos</h1>
+  <p class="subtitle">Petrobras (PETR4), Itaú (ITUB4), Vale (VALE3) e WEG (WEGE3) — fechamento mensal da B3 via Yahoo Finance, de agosto/2023 a julho/2026</p>
+  <p class="pendente">Banco do Brasil, Bradesco, Sabesp e Copel ainda serão adicionados a esta página assim que a busca dos preços reais dessas empresas for concluída.</p>
+
+  <div class="cards" id="cards"></div>
+
+  <section>
+    <h2>Performance no período (base 100 em ago/2023)</h2>
+    <p class="subtitle" style="margin-bottom:10px;">Como as ações têm preços bem diferentes, este gráfico compara o quanto cada uma valorizou ou desvalorizou, todas partindo do mesmo ponto.</p>
+    <div class="chart-box" style="position:relative;">
+      <canvas id="chart"></canvas>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section>
+    <h2>Top 3 — maiores valorizações no período</h2>
+    <table id="tabela-top3">
+      <thead>
+        <tr><th></th><th>Empresa</th><th>Preço em ago/2023</th><th>Preço em jul/2026</th><th>Performance acumulada</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Resumo geral</h2>
+    <table id="tabela">
+      <thead>
+        <tr><th>Empresa</th><th>Preço em ago/2023</th><th>Preço em jul/2026</th><th>Performance acumulada</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+// Fechamento mensal real (B3, via Yahoo Finance), ago/2023 a jul/2026.
+const DADOS = {
+  "Petrobras": [
+    {"mes":"2023-08","preco":31.94},{"mes":"2023-09","preco":34.64},{"mes":"2023-10","preco":34.74},{"mes":"2023-11","preco":35.91},{"mes":"2023-12","preco":37.24},
+    {"mes":"2024-01","preco":40.76},{"mes":"2024-02","preco":40.14},{"mes":"2024-03","preco":37.36},{"mes":"2024-04","preco":42.02},{"mes":"2024-05","preco":38.79},{"mes":"2024-06","preco":38.05},{"mes":"2024-07","preco":37.41},{"mes":"2024-08","preco":39.37},{"mes":"2024-09","preco":36.01},{"mes":"2024-10","preco":35.91},{"mes":"2024-11","preco":38.90},{"mes":"2024-12","preco":36.19},
+    {"mes":"2025-01","preco":37.69},{"mes":"2025-02","preco":35.93},{"mes":"2025-03","preco":37.16},{"mes":"2025-04","preco":29.99},{"mes":"2025-05","preco":30.90},{"mes":"2025-06","preco":31.38},{"mes":"2025-07","preco":32.64},{"mes":"2025-08","preco":31.10},{"mes":"2025-09","preco":31.46},{"mes":"2025-10","preco":29.75},{"mes":"2025-11","preco":31.79},{"mes":"2025-12","preco":30.82},
+    {"mes":"2026-01","preco":37.76},{"mes":"2026-02","preco":39.33},{"mes":"2026-03","preco":48.67},{"mes":"2026-04","preco":49.08},{"mes":"2026-05","preco":42.00},{"mes":"2026-06","preco":37.80},{"mes":"2026-07","preco":43.42}
+  ],
+  "Itaú": [
+    {"mes":"2023-08","preco":24.21},{"mes":"2023-09","preco":24.02},{"mes":"2023-10","preco":23.67},{"mes":"2023-11","preco":27.88},{"mes":"2023-12","preco":29.98},
+    {"mes":"2024-01","preco":28.93},{"mes":"2024-02","preco":29.96},{"mes":"2024-03","preco":30.57},{"mes":"2024-04","preco":27.68},{"mes":"2024-05","preco":27.39},{"mes":"2024-06","preco":28.61},{"mes":"2024-07","preco":29.90},{"mes":"2024-08","preco":32.39},{"mes":"2024-09","preco":31.87},{"mes":"2024-10","preco":30.91},{"mes":"2024-11","preco":28.77},{"mes":"2024-12","preco":27.12},
+    {"mes":"2025-01","preco":29.84},{"mes":"2025-02","preco":28.19},{"mes":"2025-03","preco":30.50},{"mes":"2025-04","preco":34.54},{"mes":"2025-05","preco":36.34},{"mes":"2025-06","preco":35.87},{"mes":"2025-07","preco":34.14},{"mes":"2025-08","preco":37.37},{"mes":"2025-09","preco":37.93},{"mes":"2025-10","preco":38.29},{"mes":"2025-11","preco":40.43},{"mes":"2025-12","preco":39.23},
+    {"mes":"2026-01","preco":45.50},{"mes":"2026-02","preco":46.78},{"mes":"2026-03","preco":43.48},{"mes":"2026-04","preco":43.19},{"mes":"2026-05","preco":40.04},{"mes":"2026-06","preco":42.18},{"mes":"2026-07","preco":42.89}
+  ],
+  "Vale": [
+    {"mes":"2023-08","preco":65.08},{"mes":"2023-09","preco":67.58},{"mes":"2023-10","preco":69.00},{"mes":"2023-11","preco":73.85},{"mes":"2023-12","preco":77.20},
+    {"mes":"2024-01","preco":67.76},{"mes":"2024-02","preco":66.99},{"mes":"2024-03","preco":60.83},{"mes":"2024-04","preco":63.29},{"mes":"2024-05","preco":63.20},{"mes":"2024-06","preco":62.22},{"mes":"2024-07","preco":61.63},{"mes":"2024-08","preco":59.58},{"mes":"2024-09","preco":63.51},{"mes":"2024-10","preco":62.06},{"mes":"2024-11","preco":58.78},{"mes":"2024-12","preco":54.55},
+    {"mes":"2025-01","preco":54.17},{"mes":"2025-02","preco":55.15},{"mes":"2025-03","preco":56.70},{"mes":"2025-04","preco":52.86},{"mes":"2025-05","preco":52.10},{"mes":"2025-06","preco":52.65},{"mes":"2025-07","preco":53.46},{"mes":"2025-08","preco":55.56},{"mes":"2025-09","preco":57.58},{"mes":"2025-10","preco":65.26},{"mes":"2025-11","preco":67.40},{"mes":"2025-12","preco":71.96},
+    {"mes":"2026-01","preco":84.32},{"mes":"2026-02","preco":88.47},{"mes":"2026-03","preco":82.48},{"mes":"2026-04","preco":81.18},{"mes":"2026-05","preco":82.82},{"mes":"2026-06","preco":77.88},{"mes":"2026-07","preco":76.28}
+  ],
+  "WEG": [
+    {"mes":"2023-08","preco":35.88},{"mes":"2023-09","preco":36.27},{"mes":"2023-10","preco":33.01},{"mes":"2023-11","preco":34.19},{"mes":"2023-12","preco":36.91},
+    {"mes":"2024-01","preco":32.34},{"mes":"2024-02","preco":36.69},{"mes":"2024-03","preco":38.20},{"mes":"2024-04","preco":39.55},{"mes":"2024-05","preco":37.55},{"mes":"2024-06","preco":42.19},{"mes":"2024-07","preco":50.66},{"mes":"2024-08","preco":54.15},{"mes":"2024-09","preco":54.39},{"mes":"2024-10","preco":54.11},{"mes":"2024-11","preco":53.94},{"mes":"2024-12","preco":52.77},
+    {"mes":"2025-01","preco":55.04},{"mes":"2025-02","preco":48.42},{"mes":"2025-03","preco":45.28},{"mes":"2025-04","preco":44.64},{"mes":"2025-05","preco":42.35},{"mes":"2025-06","preco":42.78},{"mes":"2025-07","preco":37.11},{"mes":"2025-08","preco":37.66},{"mes":"2025-09","preco":36.59},{"mes":"2025-10","preco":42.10},{"mes":"2025-11","preco":44.25},{"mes":"2025-12","preco":48.51},
+    {"mes":"2026-01","preco":51.72},{"mes":"2026-02","preco":49.70},{"mes":"2026-03","preco":51.01},{"mes":"2026-04","preco":44.86},{"mes":"2026-05","preco":44.10},{"mes":"2026-06","preco":46.91},{"mes":"2026-07","preco":47.20}
+  ]
+};
+
+const ORDEM = ["Petrobras", "Itaú", "Vale", "WEG"];
+const TICKERS = { "Petrobras": "PETR4", "Itaú": "ITUB4", "Vale": "VALE3", "WEG": "WEGE3" };
+
+// Sequência categórica validada (CVD-safe, pares adjacentes) da skill dataviz —
+// os quatro primeiros tons do esquema blue/orange/aqua/yellow/magenta/green/violet/red,
+// usados aqui na mesma ordem em que aparecem no gráfico e na legenda.
+const CORES_LIGHT = { "Petrobras": "#2a78d6", "Itaú": "#eb6834", "Vale": "#1baf7a", "WEG": "#eda100" };
+const CORES_DARK  = { "Petrobras": "#3987e5", "Itaú": "#d95926", "Vale": "#199e70", "WEG": "#c98500" };
+
+function ehEscuro() {
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function corAtual(nome) {
+  return (ehEscuro() ? CORES_DARK : CORES_LIGHT)[nome];
+}
+
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+function formatarMoeda(v) {
+  return "R$ " + v.toFixed(2).replace(".", ",");
+}
+function formatarMes(iso) {
+  const [ano, mes] = iso.split("-");
+  return MESES[parseInt(mes, 10) - 1] + "/" + ano;
+}
+
+const cardsEl = document.getElementById("cards");
+const legendEl = document.getElementById("legend");
+const tbodyEl = document.querySelector("#tabela tbody");
+const tbodyTop3El = document.querySelector("#tabela-top3 tbody");
+const destaqueEl = document.getElementById("destaque");
+
+const empresas = ORDEM.filter((nome) => DADOS[nome]);
+const series = {};
+const resultados = [];
+
+empresas.forEach((nome) => {
+  const pontos = DADOS[nome];
+  const inicial = pontos[0].preco;
+  const final = pontos[pontos.length - 1].preco;
+  const perf = ((final / inicial) - 1) * 100;
+  const indexado = pontos.map((p) => ({ mes: p.mes, valor: (p.preco / inicial) * 100 }));
+  series[nome] = indexado;
+  resultados.push({ nome, inicial, final, perf });
+
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <h3 style="color:${corAtual(nome)}">${nome} (${TICKERS[nome]})</h3>
+    <div class="preco">${formatarMoeda(final)}</div>
+    <div class="perf ${perf >= 0 ? "up" : "down"}">${perf >= 0 ? "▲" : "▼"} ${perf.toFixed(2)}% no período</div>
+    <div class="periodo">ago/2023 até ${formatarMes(pontos[pontos.length - 1].mes)}</div>
+  `;
+  cardsEl.appendChild(card);
+
+  const item = document.createElement("span");
+  item.innerHTML = `<span class="dot" style="background:${corAtual(nome)}"></span>${nome}`;
+  legendEl.appendChild(item);
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${nome} (${TICKERS[nome]})</td><td>${formatarMoeda(inicial)}</td><td>${formatarMoeda(final)}</td><td class="${perf >= 0 ? "up" : "down"}">${perf.toFixed(2)}%</td>`;
+  tbodyEl.appendChild(tr);
+});
+
+const top3 = [...resultados].sort((a, b) => b.perf - a.perf).slice(0, 3);
+top3.forEach((r, i) => {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td class="rank">${i + 1}º</td><td>${r.nome} (${TICKERS[r.nome]})</td><td>${formatarMoeda(r.inicial)}</td><td>${formatarMoeda(r.final)}</td><td class="${r.perf >= 0 ? "up" : "down"}">${r.perf.toFixed(2)}%</td>`;
+  tbodyTop3El.appendChild(tr);
+});
+
+if (top3.length) {
+  const campea = top3[0];
+  destaqueEl.innerHTML = `🏆 A campeã em valorização nos últimos 3 anos: ${campea.nome.toUpperCase()} (${TICKERS[campea.nome]}) — +${campea.perf.toFixed(2)}%`;
+}
+
+const canvas = document.getElementById("chart");
+const ctx = canvas.getContext("2d");
+const tooltip = document.getElementById("tooltip");
+const meses = empresas.length ? DADOS[empresas[0]].map((p) => p.mes) : [];
+
+function desenhar() {
+  if (!empresas.length) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const w = rect.width, h = rect.height;
+  const pad = { top: 16, right: 16, bottom: 28, left: 48 };
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, w, h);
+
+  let min = Infinity, max = -Infinity;
+  empresas.forEach((nome) => {
+    series[nome].forEach((p) => { if (p.valor < min) min = p.valor; if (p.valor > max) max = p.valor; });
+  });
+  const margem = (max - min) * 0.08;
+  min -= margem; max += margem;
+
+  const x = (i) => pad.left + (i / (meses.length - 1)) * plotW;
+  const y = (v) => pad.top + plotH - ((v - min) / (max - min)) * plotH;
+
+  const corGrid = getComputedStyle(document.documentElement).getPropertyValue("--border").trim() || "#ddd";
+  const corTexto = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim() || "#666";
+
+  ctx.strokeStyle = corGrid;
+  ctx.fillStyle = corTexto;
+  ctx.font = "11px sans-serif";
+  ctx.lineWidth = 1;
+  const linhasY = 5;
+  for (let i = 0; i <= linhasY; i++) {
+    const v = min + (i / linhasY) * (max - min);
+    const yy = y(v);
+    ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(w - pad.right, yy); ctx.stroke();
+    ctx.fillText(v.toFixed(0), 4, yy + 3);
+  }
+
+  meses.forEach((m, i) => {
+    if (i % 3 !== 0) return;
+    const xx = x(i);
+    ctx.fillText(m.slice(5, 7) + "/" + m.slice(2, 4), xx - 10, h - 8);
+  });
+
+  empresas.forEach((nome) => {
+    ctx.strokeStyle = corAtual(nome);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    series[nome].forEach((p, i) => {
+      const xx = x(i), yy = y(p.valor);
+      if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+    });
+    ctx.stroke();
+  });
+
+  canvas.onmousemove = (ev) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = ev.clientX - r.left;
+    let i = Math.round(((mx - pad.left) / plotW) * (meses.length - 1));
+    i = Math.max(0, Math.min(meses.length - 1, i));
+    const linhas = empresas.map((nome) => {
+      const p = series[nome][i];
+      return `<span style="color:${corAtual(nome)}">●</span> ${nome}: ${p.valor.toFixed(1)}`;
+    }).join("<br>");
+    tooltip.innerHTML = `<strong>${formatarMes(meses[i])}</strong><br>${linhas}`;
+    tooltip.style.display = "block";
+    tooltip.style.left = Math.min(mx + 16, w - 170) + "px";
+    tooltip.style.top = "10px";
+  };
+  canvas.onmouseleave = () => { tooltip.style.display = "none"; };
+}
+
+desenhar();
+window.addEventListener("resize", desenhar);
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenhar);
+}
+</script>
+</body>
+</html>

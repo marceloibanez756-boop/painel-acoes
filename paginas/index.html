@@ -57,6 +57,22 @@
   <main class="conteudo" id="conteudo"></main>
 </div>
 
+<!-- Botão flutuante e janela da "Análise do Dia" (só aparecem na página Ações) -->
+<button id="botao-analise-dia" class="botao-flutuante-analise oculto" type="button">🤖 Análise do Dia</button>
+
+<div id="modal-analise" class="modal-analise-fundo oculto">
+  <div class="modal-analise-caixa">
+    <div class="modal-analise-cabecalho">
+      <div>
+        <h2>Análise do Dia</h2>
+        <div class="modal-analise-meta" id="modal-analise-meta"></div>
+      </div>
+      <button class="botao-fechar-modal" id="botao-fechar-analise" type="button" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal-analise-corpo" id="modal-analise-corpo"></div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>

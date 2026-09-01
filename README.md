@@ -26,6 +26,10 @@ O app está publicado e pode ser acessado de qualquer lugar em:
 - A página "Ações" mostra cards, gráfico comparativo e tabela com os preços reais, buscados
   direto na Yahoo Finance, com botões para escolher o período (1 mês, 3 meses, 6 meses, no ano,
   1 ano, máximo). Dá para baixar os dados em CSV.
+- O botão flutuante **"Análise do Dia"**, na página Ações, gera um texto explicando os números da
+  sua carteira no período selecionado, escrito por uma IA (Claude, da Anthropic) com base só nos
+  preços — nunca notícias ou previsões inventadas. Custa uma fração de centavo de dólar por
+  análise, e uma mesma análise fica guardada por 15 minutos para evitar gasto repetido.
 - Só o administrador vê a página "Administração", onde é possível: ver todos os usuários, criar
   novos usuários, redefinir a senha de alguém, promover/rebaixar administrador e excluir usuários.
 - Ninguém se cadastra sozinho — só o administrador cria contas.
@@ -99,6 +103,19 @@ Tudo fica no arquivo `dados/dados.json`, dentro da pasta do app: usuários, senh
 criptografadas) e carteiras. Fechar e abrir o app de novo não apaga nada. Se quiser fazer uma
 cópia de segurança, basta copiar esse arquivo para outro lugar.
 
+## Análise do Dia (o botão de IA)
+
+- Na página "Ações", o botão flutuante "🤖 Análise do Dia" manda os números da sua carteira (no
+  período que você escolheu na tela) para a IA da Anthropic (Claude) escrever um texto explicando
+  o que os números sugerem — em português simples, sem inventar notícias ou previsões.
+- A IA usada é a **Claude Haiku 4.5**, a mais barata da Anthropic. Cada análise custa bem menos de
+  US$0,01 (menos de 1 centavo de dólar). Clicar de novo com a mesma carteira e o mesmo período em
+  menos de 15 minutos reaproveita a análise já feita, sem gastar de novo.
+- Isso depende de uma chave de acesso (`ANTHROPIC_API_KEY`) configurada como variável de ambiente
+  — no Railway, do mesmo jeito que a senha do administrador. Sem essa chave (ou se ela estiver
+  errada, ou o crédito da conta acabar), o botão continua funcionando normalmente, mas a janela
+  mostra uma mensagem explicando o problema em vez do texto da análise.
+
 ## Roteiro de teste (para você conferir com seus próprios olhos)
 
 1. **Login:** abra o app, tente entrar com uma senha errada (deve aparecer uma mensagem de erro
@@ -108,17 +125,25 @@ cópia de segurança, basta copiar esse arquivo para outro lugar.
 3. **Ações:** clique em "Ações". Devem aparecer cards com preços reais, um gráfico e uma tabela.
    Clique nos botões de período (1 mês, 3 meses...) e veja o gráfico mudar.
 4. **CSV:** clique em "Baixar CSV" e confira se um arquivo foi baixado com os dados da tabela.
-5. **Minha carteira:** vá em "Minha carteira", adicione uma ação nova (ex: `BBAS3`), veja que ela
+5. **Análise do Dia:** na página Ações, clique no botão flutuante "🤖 Análise do Dia" (canto
+   inferior direito). Uma janela deve abrir mostrando o período analisado e, logo abaixo, um
+   texto que vai "aparecendo" aos poucos, como se estivesse sendo digitado. No topo da janela
+   deve aparecer a hora em que a análise foi gerada. Clique no "✕" para fechar. Se você clicar de
+   novo em menos de 15 minutos com o mesmo período, o texto aparece de novo (com o mesmo efeito
+   de digitação), mas a hora mostrada deve continuar sendo a da primeira vez — é o cache
+   funcionando. Se a chave de IA não estiver configurada (ou algo estiver errado com ela), deve
+   aparecer uma mensagem explicando o problema, nunca uma tela de erro técnica.
+6. **Minha carteira:** vá em "Minha carteira", adicione uma ação nova (ex: `BBAS3`), veja que ela
    aparece na lista, depois remova alguma ação e confirme que ela some. Tente adicionar um código
    que não existe (ex: `XPTO99`) e confira se aparece uma mensagem amigável, sem tela de erro feia.
-6. **Minha conta:** troque sua própria senha e confira que precisa digitar a senha atual certa
+7. **Minha conta:** troque sua própria senha e confira que precisa digitar a senha atual certa
    para conseguir.
-7. **Administração:** crie um usuário de teste, copie a senha temporária mostrada, saia do app
+8. **Administração:** crie um usuário de teste, copie a senha temporária mostrada, saia do app
    (**Sair**) e entre com esse novo usuário e a senha temporária. Confirme que o app **obriga**
    a trocar a senha antes de deixar ver qualquer página.
-8. **Proteções de administrador:** tente excluir a si mesmo (deve barrar) e, se só existir um
+9. **Proteções de administrador:** tente excluir a si mesmo (deve barrar) e, se só existir um
    administrador, tente rebaixá-lo (deve barrar também).
-9. **Sair:** clique em "Sair" e confirme que volta para a tela de login.
+10. **Sair:** clique em "Sair" e confirme que volta para a tela de login.
 
 Se algum desses passos não se comportar como descrito, me avise contando exatamente o que
 apareceu na tela.

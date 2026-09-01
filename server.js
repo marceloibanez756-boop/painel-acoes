@@ -77,6 +77,7 @@ app.use("/api/conta", require("./servidor/rotas-conta"));
 app.use("/api/carteira", require("./servidor/rotas-carteira"));
 app.use("/api/acoes", require("./servidor/rotas-acoes"));
 app.use("/api/admin", require("./servidor/rotas-admin"));
+app.use("/api/analise", require("./servidor/rotas-analise"));
 
 app.use(express.static(path.join(__dirname, "paginas")));
 

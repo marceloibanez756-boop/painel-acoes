@@ -94,4 +94,54 @@ async function buscarSerie(tickerBruto, range) {
   return dadosSerie;
 }
 
-module.exports = { buscarSerie, normalizarTicker, apelidoTicker, RANGES_VALIDOS, erroAmigavel };
+// Busca ~100 dias corridos de preços diários, sempre no mesmo intervalo (independente do período
+// escolhido na tela). Usada pela análise por IA para calcular tendência (média 20 x 50 dias) e
+// variação dos últimos 5 pregões com precisão, mesmo quando o período da tela é curto (ex: 1 mês)
+// ou usa dados semanais (ex: "Máximo").
+async function buscarSerieRecente(tickerBruto) {
+  const ticker = normalizarTicker(tickerBruto);
+  if (!ticker) {
+    throw erroAmigavel("Informe o código de uma ação (por exemplo: PETR4).");
+  }
+  const chave = `${ticker}:recente90d`;
+
+  const emCache = cache.get(chave);
+  if (emCache && emCache.expiraEm > Date.now()) {
+    return emCache.dados;
+  }
+
+  const period1 = new Date();
+  period1.setDate(period1.getDate() - 100);
+
+  let resultado;
+  try {
+    resultado = await yahooFinance.chart(ticker, { period1, interval: "1d" });
+  } catch (erroOriginal) {
+    throw erroAmigavel(
+      `Não encontramos a ação "${apelidoTicker(ticker)}". Confira se o código está certo (ex: PETR4, ITUB4, VALE3) e tente novamente.`
+    );
+  }
+
+  const pontos = (resultado.quotes || [])
+    .filter((q) => q && q.close !== null && q.close !== undefined && q.date)
+    .map((q) => ({ data: q.date.toISOString().slice(0, 10), preco: Number(q.close.toFixed(2)) }));
+
+  if (pontos.length === 0) {
+    throw erroAmigavel(
+      `Não conseguimos dados recentes para "${apelidoTicker(ticker)}". O código pode não existir ou não ter negociações recentes.`
+    );
+  }
+
+  const dadosSerie = { ticker: apelidoTicker(ticker), pontos };
+  cache.set(chave, { dados: dadosSerie, expiraEm: Date.now() + DURACAO_CACHE_MS });
+  return dadosSerie;
+}
+
+module.exports = {
+  buscarSerie,
+  buscarSerieRecente,
+  normalizarTicker,
+  apelidoTicker,
+  RANGES_VALIDOS,
+  erroAmigavel,
+};

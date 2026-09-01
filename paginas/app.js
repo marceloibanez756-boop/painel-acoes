@@ -17,6 +17,7 @@ const PALETA_ESCURO = ["#3987e5", "#d95926", "#199e70", "#c98500", "#a875e0", "#
 let usuarioAtual = null;
 let rangeAtual = "1m";
 let ultimoResultadoAcoes = null; // guardado para gerar o CSV sem precisar buscar de novo
+let analiseEventSource = null; // conexão aberta da "Análise do Dia", se houver uma em andamento
 
 function ehEscuro() {
   return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -77,6 +78,10 @@ function mostrarTela(idTela) {
   ["tela-login", "tela-trocar-senha", "app-shell"].forEach((id) => {
     document.getElementById(id).classList.toggle("oculto", id !== idTela);
   });
+  if (idTela !== "app-shell") {
+    document.getElementById("botao-analise-dia").classList.add("oculto");
+    fecharModalAnalise();
+  }
 }
 
 // ---------- Login ----------
@@ -101,6 +106,89 @@ document.getElementById("botao-sair").addEventListener("click", async () => {
   location.hash = "";
   mostrarTela("tela-login");
 });
+
+// ---------- Análise do Dia (IA) ----------
+document.getElementById("botao-analise-dia").addEventListener("click", abrirAnaliseDoDia);
+document.getElementById("botao-fechar-analise").addEventListener("click", fecharModalAnalise);
+document.getElementById("modal-analise").addEventListener("click", (ev) => {
+  if (ev.target.id === "modal-analise") fecharModalAnalise();
+});
+
+function fecharModalAnalise() {
+  if (analiseEventSource) {
+    analiseEventSource.close();
+    analiseEventSource = null;
+  }
+  document.getElementById("modal-analise").classList.add("oculto");
+}
+
+function formatarHora(timestampMs) {
+  return new Date(timestampMs).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function abrirAnaliseDoDia() {
+  fecharModalAnalise(); // cancela uma análise anterior em andamento, se houver
+
+  const modal = document.getElementById("modal-analise");
+  const corpo = document.getElementById("modal-analise-corpo");
+  const meta = document.getElementById("modal-analise-meta");
+
+  modal.classList.remove("oculto");
+  meta.textContent = "";
+  corpo.className = "modal-analise-corpo modal-analise-carregando";
+  corpo.textContent = "Preparando sua análise...";
+
+  let textoAcumulado = "";
+  let recebeuTrecho = false;
+
+  const es = new EventSource(`/api/analise?range=${encodeURIComponent(rangeAtual)}`);
+  analiseEventSource = es;
+
+  es.addEventListener("meta", (ev) => {
+    const dados = JSON.parse(ev.data);
+    const rotulo = ROTULOS_PERIODO[dados.periodo] || dados.periodo;
+    const horaTexto = formatarHora(dados.geradoEm);
+    meta.textContent = dados.cache
+      ? `Período: ${rotulo} · análise gerada às ${horaTexto} (reaproveitada)`
+      : `Período: ${rotulo} · análise gerada às ${horaTexto}`;
+  });
+
+  es.addEventListener("chunk", (ev) => {
+    const dados = JSON.parse(ev.data);
+    if (!recebeuTrecho) {
+      recebeuTrecho = true;
+      corpo.className = "modal-analise-corpo digitando";
+      corpo.textContent = "";
+    }
+    textoAcumulado += dados.texto;
+    corpo.textContent = textoAcumulado;
+  });
+
+  es.addEventListener("erro", (ev) => {
+    const dados = JSON.parse(ev.data);
+    corpo.className = "modal-analise-corpo";
+    corpo.innerHTML = `<div class="mensagem-erro">${dados.mensagem}</div>`;
+    es.close();
+    analiseEventSource = null;
+  });
+
+  es.addEventListener("fim", () => {
+    corpo.classList.remove("digitando");
+    es.close();
+    analiseEventSource = null;
+  });
+
+  es.onerror = () => {
+    if (corpo.classList.contains("modal-analise-carregando") || (!recebeuTrecho && !textoAcumulado)) {
+      corpo.className = "modal-analise-corpo";
+      corpo.innerHTML = `<div class="mensagem-erro">Não foi possível conectar à análise agora. Tente novamente em instantes.</div>`;
+    } else {
+      corpo.classList.remove("digitando");
+    }
+    es.close();
+    analiseEventSource = null;
+  };
+}
 
 // ---------- Troca de senha obrigatória (senha temporária) ----------
 function renderTrocaDeSenhaObrigatoria() {
@@ -176,6 +264,8 @@ function renderRota() {
   document.querySelectorAll(".link-nav[data-rota]").forEach((botao) => {
     botao.classList.toggle("ativo", botao.dataset.rota === rota);
   });
+  document.getElementById("botao-analise-dia").classList.toggle("oculto", rota !== "acoes");
+  if (rota !== "acoes") fecharModalAnalise();
   const funcoes = {
     acoes: renderPaginaAcoes,
     carteira: renderPaginaCarteira,

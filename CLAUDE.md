@@ -31,6 +31,12 @@ dado o volume de uso esperado (poucos usuários conhecidos), mas revisitar se o 
 - **`yahoo-finance2` v4**: a v2 está descontinuada (end-of-life). A v4 exige instanciar a classe
   (`new YahooFinance()`), diferente da v2 que exportava uma instância pronta — não confundir ao
   consultar exemplos antigos da lib.
+- **`@anthropic-ai/sdk`** (biblioteca oficial da Anthropic): usada pela função "Análise do Dia"
+  (`servidor/ia.js`) para chamar o modelo **Claude Haiku 4.5** (`claude-haiku-4-5`) — o modelo
+  mais barato da Anthropic no momento em que essa função foi criada. `require("@anthropic-ai/sdk")`
+  já retorna a classe `Anthropic` diretamente (sem precisar de `.default`, diferente da
+  `yahoo-finance2`). A chave fica em `ANTHROPIC_API_KEY` (`.env` local / variável de ambiente no
+  Railway) — se estiver ausente, a função mostra uma mensagem amigável em vez de dar erro.
 
 ## Estrutura de pastas
 
@@ -45,6 +51,9 @@ servidor/
   rotas-carteira.js         # GET/POST/DELETE /api/carteira
   rotas-acoes.js            # GET /api/acoes?range=
   rotas-admin.js            # CRUD de usuários em /api/admin/usuarios
+  rotas-analise.js          # GET /api/analise?range= — "Análise do Dia" (Server-Sent Events)
+  ia.js                     # monta o resumo numérico da carteira, chama a Anthropic, cache 15min
+  instrucoes-analise-ia.txt # texto de sistema (system prompt) do agente — editável sem mexer em código
 paginas/
   index.html                # shell único: tela de login, troca de senha obrigatória, app com sidebar
   app.js                     # toda a lógica de frontend (fetch para a API, gráfico em <canvas>, rotas por hash)
@@ -108,6 +117,37 @@ mostrar na tela — nunca deixe um erro técnico "vazar" para o frontend; sempre
 traduza como fizeram `rotas-acoes.js` (por ação, sem derrubar as demais) e `rotas-carteira.js`
 (ao validar um ticker antes de adicioná-lo).
 
+## Análise do Dia (agente de IA)
+
+Botão flutuante na página Ações que manda um resumo numérico da carteira do usuário logado
+(no período selecionado na tela) para o Claude Haiku 4.5 e mostra a resposta chegando aos poucos.
+
+- **`servidor/ia.js`** monta o resumo: para cada ticker, usa `yahoo.buscarSerie(ticker, range)`
+  (dados do período escolhido na tela — variação, mínima/máxima com datas) mais
+  `yahoo.buscarSerieRecente(ticker)` (~100 dias corridos, sempre diários, adicionada em
+  `servidor/yahoo.js`) — essa segunda busca existe porque a tendência (média 20 x 50 dias) e a
+  variação dos últimos 5 pregões precisam de dados diários recentes mesmo quando o período da
+  tela é curto (ex: "1 mês") ou usa dados semanais (ex: "Máximo"). Números que não podem ser
+  calculados (ex: histórico insuficiente para a média de 50 dias) vão marcados como indisponíveis
+  no texto enviado à IA — nunca inventados.
+- **A IA só recebe texto com números já calculados**, nunca os pontos do gráfico nem notícias.
+  As instruções de sistema vêm de `servidor/instrucoes-analise-ia.txt`, lidas do disco a cada
+  pedido (edite esse arquivo para ajustar o "jeito de escrever" sem tocar em código nem reiniciar
+  o servidor).
+- **Streaming**: a rota `GET /api/analise?range=` (`servidor/rotas-analise.js`) responde como
+  Server-Sent Events (`text/event-stream`), repassando cada pedaço de texto que chega de
+  `client.messages.stream(...)` assim que chega — é isso que faz o texto "aparecer sendo
+  digitado" no navegador (`EventSource` em `paginas/app.js`).
+- **Cache de 15 minutos**: chave é `usuarioId:range:tickers-ordenados`, guardada em memória (mesmo
+  padrão do cache de cotações em `yahoo.js` — reinicia a cada deploy/restart, o que é aceitável
+  aqui). Numa resposta em cache, o texto é "reproduzido" em pedacinhos com pequenas pausas
+  (`reproduzirTextoEmPedacos`) só para manter o efeito visual de digitação; a hora mostrada é a da
+  geração original, não a do clique atual.
+- **Erros amigáveis**: `mapearErroAnthropic` em `ia.js` traduz as classes de erro do SDK
+  (`Anthropic.AuthenticationError`, `PermissionDeniedError`, `RateLimitError`, `BadRequestError`
+  — este último cobre o caso mais comum de crédito esgotado —, `APIConnectionError`, `APIError`)
+  em mensagens em português. Chave ausente é verificada antes de chamar a API, com mensagem própria.
+
 ## Frontend (`paginas/app.js`)
 
 SPA simples sem dependências. `iniciar()` roda no carregamento da página, chama `GET /api/me`
@@ -137,8 +177,10 @@ Não há suíte de testes automatizada. Para verificar mudanças na API, use `cu
 - **Dados persistentes**: `servidor/db.js` lê `process.env.DADOS_DIR`; no Railway essa variável
   aponta para `/data`, que é um **Volume** (HD permanente) de 500MB anexado ao serviço. Sem isso,
   `dados/dados.json` viveria no sistema de arquivos do container e seria apagado a cada deploy.
-- **Segredos**: `ADMIN_NOME`, `ADMIN_USUARIO`, `ADMIN_EMAIL`, `ADMIN_SENHA`, `CHAVE_SESSAO` e
-  `NODE_ENV=production` ficam como variáveis de ambiente no Railway, nunca em arquivo/repositório.
+- **Segredos**: `ADMIN_NOME`, `ADMIN_USUARIO`, `ADMIN_EMAIL`, `ADMIN_SENHA`, `CHAVE_SESSAO`,
+  `ANTHROPIC_API_KEY` e `NODE_ENV=production` ficam como variáveis de ambiente no Railway, nunca
+  em arquivo/repositório. `ANTHROPIC_API_KEY` é opcional: sem ela, o resto do app funciona
+  normalmente e só a "Análise do Dia" mostra uma mensagem amigável em vez de gerar o texto.
   `NODE_ENV=production` faz o cookie de sessão usar `secure: true` (só trafega em https) —
   ver `servidor/auth.js`. `server.js` também chama `app.set("trust proxy", 1)` porque o Railway
   fica atrás de um proxy que termina o https antes de repassar a requisição ao container.

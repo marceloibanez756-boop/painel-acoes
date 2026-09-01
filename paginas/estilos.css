@@ -289,3 +289,83 @@ tr:last-child td { border-bottom: none; }
 }
 
 .rodape-tabela-vazia { color: var(--muted); padding: 20px; text-align: center; }
+
+/* ---------- Botão flutuante "Análise do Dia" ---------- */
+.botao-flutuante-analise {
+  position: fixed;
+  right: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 50;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 22px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.botao-flutuante-analise:hover { background: var(--brand-hover); }
+@media (max-width: 480px) {
+  .botao-flutuante-analise { right: 14px; padding: 12px 18px; font-size: 0.88rem; }
+}
+
+/* ---------- Janela da "Análise do Dia" ---------- */
+.modal-analise-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 60;
+}
+.modal-analise-caixa {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--sombra);
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-analise-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-analise-cabecalho h2 { margin: 0 0 4px; color: var(--brand); font-size: 1.2rem; }
+.modal-analise-meta { color: var(--muted); font-size: 0.82rem; }
+.botao-fechar-modal {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+}
+.botao-fechar-modal:hover { background: var(--bg); color: var(--text); }
+.modal-analise-corpo {
+  padding: 20px 22px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+.modal-analise-corpo.modal-analise-carregando { color: var(--muted); }
+.modal-analise-corpo.digitando::after {
+  content: "▍";
+  color: var(--brand);
+  animation: piscar-cursor 1s steps(1) infinite;
+}
+@keyframes piscar-cursor { 50% { opacity: 0; } }
